@@ -1,5 +1,6 @@
 import React from "react";
 import "./CartProduct.css"
+import {formatPrice} from "../services/utility"
 
 function CartProduct({ product, removeFromCart, setProductQuantity }) {
   const { image, title, price, quantity, id } = product;
@@ -17,7 +18,7 @@ function CartProduct({ product, removeFromCart, setProductQuantity }) {
         <span>{quantity}</span>
         <button onClick={increment}>+</button>
       </div>
-      <h4 className="price"> {price}</h4>
+      <h4 className="price"> {formatPrice(price)}</h4>
     </div>
   );
 }

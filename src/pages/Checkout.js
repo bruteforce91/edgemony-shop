@@ -1,9 +1,13 @@
 import React from "react";
-import { useState } from "react";
-import "./Checkout.css"
-import { updateCart,newOrder,newCart} from "./../services/api";
+import { useState, useEffect } from "react";
+import "./Checkout.css";
+import { updateCart, newOrder, newCart } from "./../services/api";
+import { Redirect } from "react-router-dom";
 
-function Checkout({cartId,setNewCart}) {
+function Checkout({ cartId, setNewCart, setOrder, order, onError }) {
+  const [isSubmit, setSubmit] = useState(false);
+  const [retry, setRetry] = useState(false);
+
   const [dataInput, setDataInput] = useState({
     name: { value: "", modified: false },
     lastName: { value: "", modified: false },
@@ -20,29 +24,41 @@ function Checkout({cartId,setNewCart}) {
     };
   }
 
- async function onSubmit(event) {
-     event.preventDefault();
-    const data = Object.keys(dataInput).reduce(
-      (acc, key) => ({
-        ...acc,
-        [key]: dataInput[key].value,
-      }),
-      {}
-    );
-    console.log(data);
-    try{
-        await updateCart(cartId,data)
-        await newOrder(cartId)
-        const res=await newCart();
-        console.log("res",res);
-        localStorage.setItem("edgemony-cart-id",JSON.stringify(res.id))
-        setNewCart(JSON.parse(localStorage.getItem("edgemony-cart-id")))
+  async function onSubmit(event) {
+    if (event) {
+      event.preventDefault();
+      const data = Object.keys(dataInput).reduce(
+        (acc, key) => ({
+          ...acc,
+          [key]: dataInput[key].value,
+        }),
+        {}
+      );
+      console.log(data);
+      try {
+        onError(undefined);
+        await updateCart(cartId, data);
+        const resOrder = await newOrder(cartId);
+        console.log("order", resOrder);
+        const cart = await newCart();
+        console.log("res", cart);
+        localStorage.setItem("edgemony-cart-id", JSON.stringify(cart.id));
+        setNewCart(JSON.parse(localStorage.getItem("edgemony-cart-id")));
+        setOrder(resOrder);
+        setSubmit(true);
         
-    }
-    catch(error){
-        console.error(error.message)
+      } catch ({ message }) {
+        onError({ message, retry: () => setRetry(!retry) });
+        onSubmit();
+      }
     }
   }
+
+  
+  function redirect() {
+    return <Redirect to={`/order-completed/${order.id}`} />;
+  }
+
   return (
     <div className="Checkout">
       <form onSubmit={onSubmit}>
@@ -92,6 +108,7 @@ function Checkout({cartId,setNewCart}) {
         </div>
         <button type="submit">Validate your purchase</button>
       </form>
+      {isSubmit && redirect()}
     </div>
   );
 }

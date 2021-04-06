@@ -1,3 +1,8 @@
-.icon-cart:visited{
-    color: rgb(255, 157, 0);
+
+.link:visited{
+    color: rgb(255, 157, 0); 
+}
+
+#numItemsCart:visited{
+    color: red 
 }

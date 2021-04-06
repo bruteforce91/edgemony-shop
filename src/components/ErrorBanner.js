@@ -2,15 +2,23 @@
 import React, { useState } from "react";
 import "./ErrorBanner.css"
 
-export default function ErrorBanner({changeStateError,error}) {
+export default function ErrorBanner({message,retry,close}) {
     const [isClosed, setClosed] = useState(false)
     return (
-        !isClosed &&
         <div className="banner">
-            <span>{error}</span>
-            <br></br>
-            <button type="button" className="btnChangeState" onClick={()=>changeStateError()}>Retry</button>
-            <button type="button" className="btnCloseBanner" onClick={()=>setClosed(!isClosed)}>X</button>
-        </div>
+        <span className="banner__message">{message}</span>
+        <button
+          type="button"
+          onClick={() => retry()}
+        >
+          Retry
+        </button>
+        <button
+          type="button"
+          onClick={() => close()}
+        >
+          X
+        </button>
+      </div>
     )
 }

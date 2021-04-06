@@ -1,5 +1,8 @@
 export default function calcTotalPrice(cart) {
-  return cart.reduce((acc, product) => (acc += product.price), 0);
+  return  cart?.items.reduce(
+    (total, product) => total + product.price * product.quantity,
+    0
+  ) || 0;
 }
 
 const formatter = new Intl.NumberFormat("it-IT", {

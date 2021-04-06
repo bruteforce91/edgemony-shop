@@ -1,10 +1,7 @@
 import Hero from "./../components/Hero";
-//import Products from "./components/Products";
 import Footer from "./../components/Footer";
 import React, { useState, useEffect } from "react";
 import Loading from "./../components/Loading";
-import ErrorBanner from "./../components/ErrorBanner";
-//import NavBar from "./components/NavBar";
 import WrapProducts from "./../components/WrapProducts";
 import { fetchProducts, fetchCategories } from "./../services/api";
 
@@ -23,27 +20,30 @@ const data = {
   products: fakeProducts,
 };
 
-function Home({isLoading,setLoad,isErrorAPI,setErrorAPI,retry,setRetry}) {
+function Home({ onError }) {
   /******logic fetch */
   const [dataAPI, setDataAPI] = useState(cache ? cache.products : []);
-  const [categories, setCategories] = useState(cache ? cache.categories : []);
-
+  const [categories, setCategories] = useState(cache?.categories || []);
+  const [isLoading, setIsLoading] = useState(false);
+  const [retry, setRetry] = useState(false);
   useEffect(() => {
-    if (cache !== undefined) {
+    if (cache) {
       return;
-    } else {
-      setLoad(!isLoading);
-      setErrorAPI("");
+    }
+      setIsLoading(true);
+      onError(undefined);
       Promise.all([fetchProducts(), fetchCategories()])
         .then(([products, categories]) => {
           setDataAPI(products);
           setCategories(categories);
           cache = { products, categories };
-                })
-        .catch((err) => setErrorAPI(err.message))
-        .finally(() => setLoad(!isLoading));
-    }
-  }, [retry]);
+        })
+        .catch(({ message }) =>
+          onError({ message, retry: () => setRetry(!retry) })
+        )
+        .finally(() => setIsLoading(false));
+    
+  }, [retry, onError]);
 
   // function changeStateError() {
   //   setRetry=true;
@@ -54,29 +54,25 @@ function Home({isLoading,setLoad,isErrorAPI,setErrorAPI,retry,setRetry}) {
     <div className="App">
       {!isLoading ? (
         <>
-          {!isErrorAPI && (
-            <>
-              <Hero
-                title={data.title}
-                image={data.cover}
-                description={data.description}
-              />
-              <WrapProducts products={dataAPI} />
-              <Footer
-                logo={data.logo}
-                company={data.company}
-                year={currentYear}
-              />
-            </>
-          )}
+          <>
+            <Hero
+              title={data.title}
+              image={data.cover}
+              description={data.description}
+            />
+            <WrapProducts products={dataAPI} />
+            <Footer
+              logo={data.logo}
+              company={data.company}
+              year={currentYear}
+            />
+          </>
         </>
       ) : (
         <>
           <Loading />
         </>
       )}
-      {isErrorAPI && (()=>setRetry(true))
-      }
     </div>
   );
 }

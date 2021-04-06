@@ -1,16 +1,16 @@
 import "./App.css";
 import Header from "./components/Header";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 
 import calcTotalPrice from "./services/utility";
-import { BrowserRouter as Router, Switch, Route, Link } from "react-router-dom";
+import { BrowserRouter as Router, Switch, Route } from "react-router-dom";
 import Page404 from "./pages/Page404";
 import Product from "./pages/Product";
 import Home from "./pages/Home";
 import Cart from "./pages/Cart";
-import Loading from "./components/Loading";
 import ErrorBanner from "./components/ErrorBanner";
 import Checkout from "./pages/Checkout";
+import OrderCompleted from "./pages/OrderCompleted";
 
 import {
   fetchCart,
@@ -21,6 +21,7 @@ import {
 const fakeProducts = require("./mocks/data/products.json");
 const currentYear = new Date().getFullYear();
 let cartId;
+
 const data = {
   title: "Edgemony Shop",
   description: "A fake e-commerce with a lot of potential",
@@ -33,39 +34,23 @@ const data = {
 };
 
 function App() {
-  const [isLoading, setLoading] = useState(false);
-  const [isErrorAPI, setErrorAPI] = useState(false);
+  /***** cart logic and order *****/
+  const [newCart, setNewCart] = useState("");
+  const [cart, setCart] = useState(undefined);
+  const [order, setOrder] = useState([]);
   const [retry, setRetry] = useState(false);
-  const [newCart,setNewCart]=useState("");
-  const [cart, setCart] = useState([]);
-  /***********MODAL LOGIC********* */
-
-  /***********END MODAL LOGIC****************** */
-
-  /***** cart logic *****/
 
   const cartTotal = calcTotalPrice(cart); //function imported
 
   function isInCart(product) {
-    return product != null && cart.find((p) => p.id === product.id) != null;
+    return product != null && cart?.items.find((p) => p.id === product.id) != null;
   }
-  // function addToCart(product) {
-  //   setCart([...cart, { ...product, quantity: 1 }]);
-  // }
-  // function removeFromCart(productId) {
-  //   setCart(cart.filter((product) => product.id !== productId));
-  // }
-  // function setProductQuantity(productId, quantity) {
-  //   setCart(
-  //     cart.map((product) =>
-  //       product.id === productId ? { ...product, quantity } : product
-  //     )
-  //   );
-  // }
+
   async function updateCart(fn, ...apiParams) {
     try {
-      const cartObj = await fn(...apiParams);
-      setCart(cartObj.items);
+      const cart = await fn(...apiParams);
+      setCart(cart);
+      return cart;
     } catch (error) {
       console.error(`${fn.name} API call response error! ${error.message}`);
     }
@@ -79,104 +64,103 @@ function App() {
   function setProductQuantity(productId, quantity) {
     updateCart(fetchAddToCart, cartId, productId, quantity);
   }
+  // gestione errori
+  const [isLoading, setLoading] = useState(false);
+  const [apiErrors, setApiErrors] = useState({});
+  const cartError = apiErrors.cart;
+  const errorKey = Object.keys(apiErrors).find((key) => apiErrors[key] != null);
 
-//fetch cart
+  const setCartError = useCallback(
+    (error) => setApiErrors((errors) => ({ ...errors, cart: error })),
+    []
+  );
+  const setProductListError = useCallback(
+    (error) => setApiErrors((errors) => ({ ...errors, productList: error })),
+    []
+  );
+  const setProductError = useCallback(
+    (error) => setApiErrors((errors) => ({ ...errors, product: error })),
+    []
+  );
+
+  //fetch cart
   useEffect(() => {
     const cartIdFromLocalStorage = localStorage.getItem("edgemony-cart-id");
-    if (cartIdFromLocalStorage) {
-      async function fetchCartEffect() {
-        try {
-          setLoading(true);
-          setErrorAPI("");
-          const cartObj = await fetchCart(cartIdFromLocalStorage);
-          setCart(cartObj.items);
-          cartId = cartObj.id;
-        } catch (error) {
-          setErrorAPI(error.message);
-        } finally {
-          setLoading(false);
-        }
-      }
-      fetchCartEffect();
+    if (!cartIdFromLocalStorage) {
+      return;
     }
-  }, [retry,newCart]);
+    setLoading(true);
+    setCartError(undefined);
+    async function fetchCartEffect() {
+      try {
+        const cartObj = await fetchCart(cartIdFromLocalStorage);
+        setCart(cartObj);
+        cartId = cartObj.id;
+      } catch ({ message }) {
+        setCartError({ message, retry: () => setRetry(!retry) });
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchCartEffect();
+  }, [retry, newCart, setCartError]);
   /*********end cart logic *******/
 
   return (
     <>
       <Router>
         <div className="App">
-          <Header logo={data.logo} cart={cart} totalCart={cartTotal} />
-        </div>
-        {/* <ModalSidebar
-                  isOpen={isOpenModalCart}
-                  close={closeModalCart}
-                  title="Cart"
-                  >
-                  <Cart
-                  products={cartProducts}
-                  removeFromCart={removeFromCart}
-                  setProductQuantity={setProductQuantity}
-                  totalPrice={cartTotal}
-                  />
-                </ModalSidebar> */}
-        {!isLoading ? (
-          <>
-            {!isErrorAPI && (
-              <>
-                <Switch>
-                  <Route exact path="/">
-                    <Home
-                      isLoading={isLoading}
-                      setLoad={setLoading}
-                      isErrorAPI={isErrorAPI}
-                      setErrorAPI={setErrorAPI}
-                      retry={retry}
-                      setRetry={setRetry}
-                    ></Home>
-                  </Route>
-                  <Route path="/products/:productId">
-                    <Product
-                      inCart={isInCart}
-                      addToCart={addToCart}
-                      removeFromCart={removeFromCart}
-                      isLoading={isLoading}
-                      setLoad={setLoading}
-                      isErrorAPI={isErrorAPI}
-                      setErrorAPI={setErrorAPI}
-                      retry={retry}
-                      setRetry={setRetry}
-                    />
-                  </Route>
-                  <Route exact path="/cart">
-                    <Cart
-                      products={cart}
-                      removeFromCart={removeFromCart}
-                      setProductQuantity={setProductQuantity}
-                      totalPrice={cartTotal}
-                    />
-                  </Route>
-                  <Route exact path="/checkout">
-                    <Checkout cartId={cartId} setNewCart={setNewCart}/>
-                  </Route>
-                  <Route path="*">
-                    <Page404 />
-                  </Route>
-                </Switch>
-              </>
-            )}
-          </>
-        ) : (
-          <>
-            <Loading />
-          </>
-        )}
-        {isErrorAPI && (
-          <ErrorBanner
-            changeStateError={() => setRetry(!retry)}
-            error={isErrorAPI}
+          <Header
+            logo={data.logo}
+            cart={cart}
+            totalCart={cartTotal}
+            showCart={!isLoading && !cartError}
           />
-        )}
+        </div>
+        <Switch>
+          <Route exact path="/">
+            <Home onError={setProductListError}></Home>
+          </Route>
+          <Route path="/products/:productId">
+            <Product
+              inCart={isInCart}
+              addToCart={addToCart}
+              removeFromCart={removeFromCart}
+              onError={setProductError}
+            />
+          </Route>
+          <Route exact path="/cart">
+            <Cart
+              products={cart}
+              removeFromCart={removeFromCart}
+              setProductQuantity={setProductQuantity}
+              totalPrice={cartTotal}
+            />
+          </Route>
+          <Route exact path="/checkout">
+            <Checkout
+              cartId={cartId}
+              setNewCart={setNewCart}
+              setOrder={setOrder}
+              order={order}
+              onError={setProductError}
+            />
+          </Route>
+          <Route path="/order-completed/:orderId">
+            <OrderCompleted order={order} />
+          </Route>
+          <Route path="*">
+            <Page404 />
+          </Route>
+        </Switch>
+
+        {errorKey ? (
+          <ErrorBanner
+            message={apiErrors[errorKey].message}
+            close={() => setApiErrors({ ...apiErrors, [errorKey]: undefined })}
+            retry={apiErrors[errorKey].retry}
+          />
+        ) : null}
       </Router>
     </>
   );

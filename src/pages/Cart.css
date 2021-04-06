@@ -1,9 +1,10 @@
 .Cart{
     display: flex;
     flex-direction: column;
+    margin-left: 100px;
 }
 .Cart button{
-    margin-top:15px;
+    margin-top:35px;
     border:none;
     border-radius:5px;
     padding:10px;
@@ -16,4 +17,17 @@
 }
 .Cart button:hover{
     background-color:goldenrod;
+}
+
+.Cart img{
+    height:100px;
+    margin: 20px;
+}
+.wrapCheckout{
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+.btnCheckout{
+    width:9%
 }
